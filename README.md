@@ -7,6 +7,14 @@ Date: 15/05/2024
 Twenty plus years after initial discussion, Scrone has been made!
 This is a simple python3 script created to crawl and evaluate websites.
 
+This is a tool used to aid myself and fellow security folk.
+DO NOT USE THIS TOOL ON WEBSITE YOU DON'T OWN OR DON'T HAVE PERMISSION 
+TO SCAN/PENTEST. DOING SO CAN BE ILLEGAL, CAN GET YOU IN SERIOUS TROUBLE
+AND SENT TO BED WITHOUT ANY SUPPER.
+Also, as I'm in capital writing mood: USE THIS PROGRAM AT YOUR OWN RISK! 
+I WILL NOT BE ACCOUNTABLE FOR ANY DAMAGE OR LOSS OF DATA CAUSED MY USING
+THIS TOOL!
+
 Features included are:
 
 * Deep crawl: As well as crawling href tags this will also crawl other
@@ -51,10 +59,6 @@ TODO/Future features will include:
 
 Also a better help page will be included, but the tool is more or less self descriptive with its help screen.
 
-As usual with the tools I write:
-USE AT YOUR OWN RISK! I WILL NOT BE ACCOUNTABLE FOR ANY DAMAGE OR LOSS OF DATA CAUSED MY USING THIS TOOL!
-
 Have fun and enjoy yourselves. :O)
 
--gerbil
-# -gerb. 
+# -gerbil 
