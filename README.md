@@ -1,8 +1,11 @@
 # Scrone
 
 Author: gerbil.
-Version: 0.1 
-Date: 15/05/2024
+Version: 0.2 
+Date: 16/05/2024
+
+Old versions:
+15/05/2024 : v0.1
 
 Twenty plus years after initial discussion, Scrone has been made!
 This is a simple python3 script created to crawl and evaluate websites.
@@ -16,6 +19,9 @@ I WILL NOT BE ACCOUNTABLE FOR ANY DAMAGE OR LOSS OF DATA CAUSED MY USING
 THIS TOOL!
 
 Features included are:
+
+* Crawl: Will crawl a website's hrefs to map the site.
+  NOTE: This is a bit buggy, but not dangerous, and is being worked on.
 
 * Deep crawl: As well as crawling href tags this will also crawl other
   tags found on the website, such as js scripts and their sub folders.

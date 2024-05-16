@@ -18,22 +18,28 @@ import time
 #       ░  ░ ░         ░         ░ ░           ░    ░  ░
 #          ░                                           
 # Author: gerbil.
-# Version: 0.1 
-# Date: 15/05/2024
+# Version: 0.2
+# Date: 16/05/2024
+#
+# Previous releases:
+# 15/05/2024 : v0.1
 #
 # Twenty plus years after initial discussion, Scrone has been made!
 # This is a simple python3 script created to crawl and evaluate websites.
 #
 # Features included are:
 #
-# * Deep crawl: As well as crawling href tags this will also crawl other
-#   tags found on the website, such as js scripts and their sub folders.
+# * Crawl: Searches for and crawls links on the page.
+#   NOTE: This is a bit buggy, but not dangerous, and is being worked on.
+
+# * Deep crawl: As well as crawling links, href links, this will also crawl other
+#   tags found on the website, such as js scripts and also their sub folders.
 #   All found and ignored (out of domain) locations are stored in respective
 #   files.
 #   NOTE: This is a bit buggy, but not dangerous, and is being worked on.
 #
 # * "Index of" search: Pages with directory listing enabled will be found
-#   and location recorded.
+#   and location recorded. Any that are "Forbidden" will also be recorded.
 # 
 # * WordPress User Enumeration: An attempt will be used to enumerate WordPress
 #   users of the site.
@@ -175,24 +181,29 @@ def get_links(url):
         
     # Find all href and src attributes
     for tag in soup.find_all(['a', 'img', 'link', 'script']):
+        # crawl (just hrefs):
         if 'href' in tag.attrs:
             sub = tag['href']
             # Convert relative URLs to absolute URLs
             full_url = get_absolute_url(url, sub)
             links.add(full_url)
-            while '/' in sub:
-                sub = sub.rsplit('/', 1)[0]
-                if '//' in sub:
-                    links.add(get_absolute_url(url, sub))
+            # deepcrawl (...and the rest):
+            if args.deepcrawl:
+                while '/' in sub:
+                    sub = sub.rsplit('/', 1)[0]
+                    if '//' in sub:
+                        links.add(get_absolute_url(url, sub))
         if 'src' in tag.attrs:
             sub = tag['src']
             # Convert relative URLs to absolute URLs
             full_url = get_absolute_url(url, sub)
             links.add(full_url)
-            while '/' in sub:
-                sub = sub.rsplit('/', 1)[0]
-                if '//' in sub:
-                    links.add(get_absolute_url(url, sub))
+            # deepcrawl (...and the rest):
+            if args.deepcrawl:
+                while '/' in sub:
+                    sub = sub.rsplit('/', 1)[0]
+                    if '//' in sub:
+                        links.add(get_absolute_url(url, sub))
     return links
 
 def clean_link(link):
@@ -203,14 +214,14 @@ def get_absolute_url(base_url, relative_url):
     return urljoin(base_url, relative_url)
 
 def is_image(link):
-    # Check if link ends with common image extensions
+    # Check if link ends with common image extensions. TODO: Store saucy images in a folder called "pervy". Also make file extensions optional.
     image_extensions = ['.jpg', '.jpeg', '.png', '.gif', '.bmp']
     return any(link.lower().endswith(ext) for ext in image_extensions)
 
 def is_subdomain(domain, base_domain):
     return domain == base_domain or domain.endswith('.' + base_domain)
 
-def crawl_website(url, visited=set(), ignored=set(), indexes=set(), base_domain=None, depth=0, max_depth=5):
+def crawl_website(url, visited=set(), ignored=set(), indexes=set(), forbidden=set(), base_domain=None, depth=0, max_depth=5):
     if depth > max_depth:
         return
 
@@ -218,11 +229,14 @@ def crawl_website(url, visited=set(), ignored=set(), indexes=set(), base_domain=
         response = requests.get(url)
         soup = BeautifulSoup(response.content, 'html.parser')
 
-        # Check if the title contains "Index of"
+        # Check if the title contains "Index of" or "Forbidden
         if args.indexes:
             if soup.title and soup.title.string and "Index of" in soup.title.string:
                 indexes.add(url)
                 print('INDEX: ' + url)
+            if soup.title and soup.title.string and "Forbidden" in soup.title.string:
+                forbidden.add(url)
+                print('FORBIDDEN INDEX: ' + url)
     except requests.RequestException as e:
         print(f"Failed to access {url}: {e}")
         return
@@ -242,7 +256,7 @@ def crawl_website(url, visited=set(), ignored=set(), indexes=set(), base_domain=
                 print("Visiting: " + cleaned_link)
                 visited.add(cleaned_link)
                 # If it's a subfolder, explore it recursively
-                crawl_website(cleaned_link, visited, ignored, indexes, base_domain, depth + 1, max_depth)
+                crawl_website(cleaned_link, visited, ignored, indexes, forbidden, base_domain, depth + 1, max_depth)
         else:
             # If it's outside the given domain, add it to ignored set if not already added
             if cleaned_link not in ignored:
@@ -254,7 +268,8 @@ if __name__ == "__main__":
     parser = argparse.ArgumentParser(description='Scrone')
     parser.add_argument('-U', '--url', required=True, help='The host URL.')
     parser.add_argument('-d', '--depth', type=int, default=5, help='The maximum depth to crawl (default is 5).')
-    parser.add_argument('-c', '--crawl', action='store_true', help='BETA: Crawls a given website.')
+    parser.add_argument('-c', '--crawl', action='store_true', help='BETA: Crawls a given website, just the hrefs.')
+    parser.add_argument('-C', '--deepcrawl', action='store_true', help='BETA: Crawls a given website, every link found.')
     parser.add_argument('-i', '--indexes', action='store_true', help='Stores any "Index of..." files that are found during a crawl. Must be used with (-c, --crawl) parameter.')
     parser.add_argument( '--wp-user-enum', action='store_true', help='BETA: Attempts and enumeration of WordPress users.')
     parser.add_argument('-u', '--wp-username', type=str, help='Currently accepts a single WordPress user for password auditing.')
@@ -269,13 +284,15 @@ if __name__ == "__main__":
     visited_file = 'visited.txt'
     ignored_file = 'ignored.txt'
     indexes_file = 'indexes.txt'
+    forbidden_file = 'forbidden.txt'
     WPusername = args.wp_username
     WPwordlistFile = args.wp_wordlist   
-    version = "0.1 " # keep to 4 chars wide to keep banner intact  
+    version = "0.2 " # keep to 4 chars wide to keep banner intact  
     
     visited = set()
     ignored = set()
     indexes = set()
+    forbidden = set()
     
     banner()
 
@@ -288,10 +305,13 @@ if __name__ == "__main__":
             exit(1)
         wp_password_attack(start_url, WPusername, WPwordlistFile)
 
-    if args.crawl:
-        print(f"Deep crawling {start_url} with max depth of {max_depth}...")
+    if args.crawl or args.deepcrawl:
+        if args.crawl:
+            print(f"Crawling {start_url} with max depth of {max_depth}...")
+        if args.deepcrawl:
+            print(f"Deep Crawling {start_url} with max depth of {max_depth}...")
 
-        crawl_website(start_url, visited, ignored, indexes, base_domain, max_depth=max_depth)
+        crawl_website(start_url, visited, ignored, indexes, forbidden, base_domain, max_depth=max_depth)
 
         # Write unique visited links to visited.txt
         with open(visited_file, 'w') as f:
@@ -303,8 +323,18 @@ if __name__ == "__main__":
             for link in ignored:
                 f.write(link + '\n')
         
-        # Print indexes if the --indexes flag is set
+        # Print indexes and forbiddens if the --indexes flag is set
         if args.indexes:
             print("Index links found:")
-            for link in indexes:
-                print(link)
+            if indexes:
+                with open(indexes_file, 'w') as f:
+                    for link in indexes:
+                        f.write(link + '\n')
+                        print(link)
+            print("Forbidden index links found:")
+            if forbidden:
+                with open(forbidden_file, 'w') as f:
+                    for link in forbidden:
+                        f.write(link + '\n')
+                        print(link)
+
